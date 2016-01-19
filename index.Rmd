@@ -1,0 +1,110 @@
+---
+title       : Reproducible Pitch Presentation
+subtitle    : Ballon d'Or 2015 Vote Analysis
+author      : Narendra Choudhary
+job         : Developing Data Products Coursera Class (January 2016)
+framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js  # {highlight.js, prettify, highlight}
+hitheme     : tomorrow      # 
+widgets     : [mathjax, bootstrap]  # {mathjax, quiz, bootstrap}
+mode        : selfcontained # {standalone, draft}
+knit        : slidify::knit2slides
+
+---
+## About this project
+This project provides a comparison of votes casted for FIFA Ballon d'Or Men 2015. The data used is availabe at
+[FIFA.com](http://www.fifa.com/ballon-dor/official-documents/index.html).  
+A brief How-to is provided in application for those who aren't aware of FIFA Ballon d'Or voting procedure. FIFA uses preferential voting with points divided between ranks.
+Application can handle 3 types of comparisons:
+* First comparison type is "**All Players**". It displays a plot comparing all nominees. Options for selecting players which have collected votes within a range can also be selected using options.
+* Second comparison type is "**Two Players**". Options are selecting two players. Any two nominees can be compared using this comparison type.
+* Last comparison type is "**One Player**". Option allows choosing the players whose stats user wishes to know. A plot showing distribution of player's votes appear.
+
+Selecting comparison type renders further option(s) available for that comparison type. Barplot (stacked/side-by-side) is generated based on comparison type and options. Color Coding has been used to differentiate voting choices (1st, 2nd and 3rd).
+
+--- .class #id
+## Data
+```{r}
+str(playerwise_men) # data frame of men votes
+```
+Next slide shows a snippet of `server.R` which generates dynamic UI.
+
+--- .class #id
+## Dynamic UI
+```{r, eval=FALSE}
+output$radioButtonControls <- renderUI({
+        # Selects UI based on input type
+        if(input$action_type == "one"){ # For one player option
+            wellPanel(
+                playerselect_block # selectInput Block
+            )
+        }else if(input$action_type == "two"){ # For two players option
+            wellPanel(
+                playercomparison1_block, # selectInput Block
+                playercomparison2_block # selectInput Block
+            )
+        }else{ # For all players option
+            wellPanel( # 3 sliderInput Blocks
+                min_5pts, min_3pts, min_1pts
+            )
+        }
+    })
+```
+
+---&twocol
+## Plot: Examples
+
+*** {name: left}
+
+```{r echo=FALSE, error=FALSE, message=FALSE}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(reshape2))
+r_data <- filter(playerwise_men, player_name == "Messi Lionel" | player_name == "Cristiano Ronaldo") %>% melt() %>% filter(variable != "total")
+ggplot(r_data, aes(x=player_name, y = value, fill=variable)) + 
+        geom_bar(stat="identity", position = "dodge", color = "black") + 
+        theme_bw() +
+        theme(
+            axis.text.x = element_text(size=17), 
+            axis.text.y = element_text(size = 17),
+            #legend.key = element_rect(color = "black"),
+            legend.text = element_text(size = 15),
+            legend.title = element_text(size = 18),
+            #legend.position = "top",
+            axis.title.y = element_text(size = rel(1.5)),
+            axis.title.x = element_text(size = rel(1.5)),
+            legend.title = element_text(size = rel(2)),
+            plot.title = element_text(size = rel(2))
+        ) + labs(title="Comparison between two nominees", x = "Players", y = "PositionWise Vote Count") + 
+        geom_text(aes(y=value/2, label=value), position = position_dodge(width=1), size = 5) + 
+        scale_y_continuous(breaks=seq(0, 350, 25)) + 
+        scale_fill_brewer("Vote\nPositions", palette = "Set1")
+```
+
+*** {name: right}
+
+```{r echo=FALSE, message=FALSE}
+vote_group <- c("First", "Second", "Third")
+vote_value_vec <- playerwise_men[playerwise_men$player_name == "Neymar", ]
+vote_value <- as.numeric(as.vector(vote_value_vec[,2:4]))
+r_data <- data.frame(vote_group = vote_group, vote_value = vote_value)
+ggplot(r_data, aes(x=vote_group, y = vote_value, fill = vote_group)) + 
+        geom_bar(stat="identity", color="black") + 
+        geom_text(aes(y=vote_value/2, label = vote_value), size = 8) +
+        theme_bw() +
+        theme(
+            axis.text.x = element_text(size=17), 
+            axis.text.y = element_text(size = 17),
+            #legend.key = element_rect(color = "black"),
+            legend.text = element_text(size = 15),
+            legend.title = element_text(size = 18),
+            #legend.position = "top",
+            axis.title.y = element_text(size = rel(1.5)),
+            axis.title.x = element_text(size = rel(1.5)),
+            legend.title = element_text(size = rel(2)),
+            plot.title = element_text(size = rel(2))
+        ) +
+        scale_fill_brewer("Vote\nPositions", palette = "Set1") +
+        scale_y_continuous(breaks = seq(0, 475, 25)) +
+        labs(title = "Vote Distribution for Neymar", x = "Vote Positions", y = "Vote Count")
+```
+
